@@ -111,8 +111,10 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     break;
 
   case BPredMine:
-    pred->dirpred.mine =
-      bpred_dir_create(class,0,0,0,0);
+    pred->dirpred.bimod = 
+      bpred_dir_create(class, bimod_size, 0, 0, 0);
+
+    break;
       //TODO: enter correct config info
 
   case BPredTaken:
@@ -244,6 +246,7 @@ bpred_dir_create (
     }
 
   case BPred2bit:
+  case BPredMine:
     if (!l1size || (l1size & (l1size-1)) != 0)
       fatal("2bit table size, `%d', must be non-zero and a power of two", 
 	    l1size);
@@ -290,6 +293,7 @@ bpred_dir_config(
     break;
 
   case BPred2bit:
+  case BPredMine:
     fprintf(stream, "pred_dir: %s: 2-bit: %d entries, direct-mapped\n",
       name, pred_dir->config.bimod.size);
     break;
@@ -300,9 +304,6 @@ bpred_dir_config(
 
   case BPredNotTaken:
     fprintf(stream, "pred_dir: %s: predict not taken\n", name);
-    break;
-
-  case BPredMine:
     break;
 
   default:
@@ -552,8 +553,38 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
     case BPred2bit:
       p = &pred_dir->config.bimod.table[BIMOD_HASH(pred_dir, baddr)];
       break;
-    case BPredMine:
-      //TODO: add stuff here
+    case BPredMine:   
+    {
+      //TODO: add stuff here Done!
+      int l1index, l2index;
+
+      /* traverse 2-level tables */
+      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir->config.two.l1size - 1);
+      l2index = pred_dir->config.two.shiftregs[l1index];
+      if (pred_dir->config.two.xor)
+	    {
+      #if 1
+        /* this L2 index computation is more "compatible" to McFarling's
+          verison of it, i.e., if the PC xor address component is only
+          part of the index, take the lower order address bits for the
+          other part of the index, rather than the higher order ones */
+        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT))
+          & ((1 << pred_dir->config.two.shift_width) - 1))
+          | ((baddr >> MD_BR_SHIFT)
+          << pred_dir->config.two.shift_width));
+      #else
+        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
+      #endif
+      }
+      else
+      {
+        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir->config.two.shift_width);
+      }
+          l2index = l2index & (pred_dir->config.two.l2size - 1);
+
+          /* get a pointer to prediction state information */
+          p = &pred_dir->config.two.l2table[l2index];
+      }
       break;
     case BPredTaken:
     case BPredNotTaken:
@@ -651,7 +682,12 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
       }
       break;
     case BPredMine:
-      //TODO: add mine!
+    //TODO: did stuff here
+      if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
+      {
+        dir_update_ptr->pdir1 =
+          bpred_dir_lookup (pred->dirpred.bimod, baddr);
+      }
       break;
     default:
       panic("bogus predictor class");
@@ -844,8 +880,7 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   if (MD_IS_CALL(op) && pred->retstack.size)
     {
       pred->retstack.tos = (pred->retstack.tos + 1)% pred->retstack.size;
-      pred->retstack.stack[pred->retstack.tos].target = 
-	baddr + sizeof(md_inst_t);
+      pred->retstack.stack[pred->retstack.tos].target = baddr + sizeof(md_inst_t);
       pred->retstack_pushes++;
     }
   #endif /* RAS_BUG_COMPATIBLE */
