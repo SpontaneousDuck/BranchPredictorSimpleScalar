@@ -130,7 +130,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
-  case BPredMine
+  case BPredMine:
     {
       int i;
 
