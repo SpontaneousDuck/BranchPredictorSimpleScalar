@@ -111,8 +111,8 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
     break;
 
   case BPredMine:
-    pred->dirpred.bimod = 
-      bpred_dir_create(class, bimod_size, 0, 0, 0);
+    pred->dirpred.mine = 
+      bpred_dir_create(class, 0, 0, 0, 0);
 
     break;
       //TODO: enter correct config info
@@ -132,7 +132,6 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
-  case BPredMine:
     {
       int i;
 
@@ -177,6 +176,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
   case BPredTaken:
   case BPredNotTaken:
+  case BPredMine:
     /* no other state */
     break;
 
@@ -246,7 +246,6 @@ bpred_dir_create (
     }
 
   case BPred2bit:
-  case BPredMine:
     if (!l1size || (l1size & (l1size-1)) != 0)
       fatal("2bit table size, `%d', must be non-zero and a power of two", 
 	    l1size);
@@ -262,6 +261,9 @@ bpred_dir_create (
 	      flipflop = 3 - flipflop;
       }
 
+    break;
+  case BPredMine:
+    pred_dir->config.mineState = 0x00;
     break;
 
   case BPredTaken:
@@ -555,36 +557,14 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
       break;
     case BPredMine:   
     {
-      //TODO: add stuff here Done!
-      int l1index, l2index;
-
-      /* traverse 2-level tables */
-      l1index = (baddr >> MD_BR_SHIFT) & (pred_dir->config.two.l1size - 1);
-      l2index = pred_dir->config.two.shiftregs[l1index];
-      if (pred_dir->config.two.xor)
-	    {
-      #if 1
-        /* this L2 index computation is more "compatible" to McFarling's
-          verison of it, i.e., if the PC xor address component is only
-          part of the index, take the lower order address bits for the
-          other part of the index, rather than the higher order ones */
-        l2index = (((l2index ^ (baddr >> MD_BR_SHIFT))
-          & ((1 << pred_dir->config.two.shift_width) - 1))
-          | ((baddr >> MD_BR_SHIFT)
-          << pred_dir->config.two.shift_width));
-      #else
-        l2index = l2index ^ (baddr >> MD_BR_SHIFT);
-      #endif
+      char temp = 0;
+      if(pred_dir->config.mineState >= 0x10 ){
+        temp = 1;
+        p = &temp;
       }
       else
-      {
-        l2index = l2index | ((baddr >> MD_BR_SHIFT) << pred_dir->config.two.shift_width);
-      }
-          l2index = l2index & (pred_dir->config.two.l2size - 1);
-
-          /* get a pointer to prediction state information */
-          p = &pred_dir->config.two.l2table[l2index];
-      }
+        p = &temp;
+    }
       break;
     case BPredTaken:
     case BPredNotTaken:
@@ -682,11 +662,19 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
       }
       break;
     case BPredMine:
-    //TODO: did stuff here
+    //TODO: did stuff here this might be wrong, not sure about the if statement
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
       {
-        dir_update_ptr->pdir1 =
-          bpred_dir_lookup (pred->dirpred.bimod, baddr);
+          char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          if (*prediction){
+            return btarget;
+          }
+          else {
+            return baddr + sizeof(md_inst_t);
+          }
+      }
+      else{
+        return btarget;
       }
       break;
     default:
@@ -869,6 +857,22 @@ bpred_update(struct bpred_t *pred,	/* branch predictor instance */
   /* Can exit now if this is a stateless predictor */
   if (pred->class == BPredNotTaken || pred->class == BPredTaken)
     return;
+
+  if (pred->class == BPredMine){
+    if (taken){
+      if( pred->dirpred.mine->config.mineState == 3){ //if it is at 11 we keep it there
+        return;
+      }
+      pred->dirpred.mine->config.mineState++;//add one to the branch predictor
+    }
+    else{
+      if (pred->dirpred.mine->config.mineState == 0){ //if its at 00 we keep it there
+        return;
+      }
+      pred->dirpred.mine->config.mineState--;//subtract one to teh pranch predictor
+    }
+    return;
+  }
 
   /* 
    * Now we know the branch didn't use the ret-addr stack, and that this

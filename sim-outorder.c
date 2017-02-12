@@ -957,6 +957,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     }
   else if (!mystricmp(pred_type, "mine"))
   {
+    #if 0
     /* bimodal predictor, bpred_create() checks BTB_SIZE */
       if (bimod_nelt != 1)
 	fatal("bad bimod predictor config (<table_size>)");
@@ -974,6 +975,9 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 			  /* btb sets */btb_config[0],
 			  /* btb assoc */btb_config[1],
 			  /* ret-addr stack size */ras_size);
+    #endif
+    /*mine predictor*/
+    pred = bpred_create(BPredMine, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   }
   else if (!mystricmp(pred_type, "comb"))
     {
