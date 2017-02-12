@@ -113,7 +113,6 @@ struct bpred_btb_ent_t {
   md_addr_t addr;		/* address of branch being tracked */
   enum md_opcode op;		/* opcode of branch corresp. to addr */
   md_addr_t target;		/* last destination of branch when taken */
-  bool_t biasingBit;
   struct bpred_btb_ent_t *prev, *next; /* lru chaining pointers */
 };
 
@@ -133,6 +132,7 @@ struct bpred_dir_t {
       int *shiftregs;		/* level-1 history table */
       unsigned char *l2table;	/* level-2 prediction state table */
     } two;
+    int mineState; /*current state of the mine predictor*/
   } config;
 };
 
