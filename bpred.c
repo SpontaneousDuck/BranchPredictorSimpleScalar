@@ -132,6 +132,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
   case BPredComb:
   case BPred2Level:
   case BPred2bit:
+  case BPredMine:
     {
       int i;
 
@@ -176,7 +177,7 @@ bpred_create(enum bpred_class class,	/* type of predictor to create */
 
   case BPredTaken:
   case BPredNotTaken:
-  case BPredMine:
+  
     /* no other state */
     break;
 
@@ -665,13 +666,14 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
     //TODO: did stuff here this might be wrong, not sure about the if statement
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
       {
-          char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
-          if (*prediction){
+          //char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          dir_update_ptr->pdir1 = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          /*if (*prediction){
             return btarget;
           }
           else {
             return baddr + sizeof(md_inst_t);
-          }
+          } */
       }
       else{
         return btarget;
@@ -720,24 +722,24 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
   index = (baddr >> MD_BR_SHIFT) & (pred->btb.sets - 1);
 
   if (pred->btb.assoc > 1)
-    {
-      index *= pred->btb.assoc;
+  {
+    index *= pred->btb.assoc;
 
-      /* Now we know the set; look for a PC match */
-      for (i = index; i < (index+pred->btb.assoc) ; i++)
-	if (pred->btb.btb_data[i].addr == baddr)
-	  {
-	    /* match */
-	    pbtb = &pred->btb.btb_data[i];
-	    break;
-	  }
-    }	
+    /* Now we know the set; look for a PC match */
+    for (i = index; i < (index+pred->btb.assoc) ; i++)
+      if (pred->btb.btb_data[i].addr == baddr)
+        {
+          /* match */
+          pbtb = &pred->btb.btb_data[i];
+          break;
+        }
+  }	
   else
-    {
-      pbtb = &pred->btb.btb_data[index];
-      if (pbtb->addr != baddr)
-	pbtb = NULL;
-    }
+  {
+    pbtb = &pred->btb.btb_data[index];
+    if (pbtb->addr != baddr)
+      pbtb = NULL;
+  }
 
   /*
    * We now also have a pointer into the BTB for a hit, or NULL otherwise

@@ -977,7 +977,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 			  /* ret-addr stack size */ras_size);
     #endif
     /*mine predictor*/
-    pred = bpred_create(BPredMine, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    pred = bpred_create(BPredMine, 0, 0, 0, 0, 0, 0, btb_config[0], 1, ras_size);
   }
   else if (!mystricmp(pred_type, "comb"))
     {
