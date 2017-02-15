@@ -559,12 +559,10 @@ bpred_dir_lookup(struct bpred_dir_t *pred_dir,	/* branch dir predictor inst */
     case BPredMine:   
     {
       char temp = 0;
-      if(pred_dir->config.mineState >= 0x10 ){
-        temp = 1;
-        p = &temp;
+      if(pred_dir->config.mineState >= 2 ){
+        temp = 2;
       }
-      else
-        p = &temp;
+      p = &temp;
     }
       break;
     case BPredTaken:
@@ -666,14 +664,14 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
     //TODO: did stuff here this might be wrong, not sure about the if statement
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
       {
-          //char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
-          dir_update_ptr->pdir1 = bpred_dir_lookup (pred->dirpred.mine, baddr);
-          /*if (*prediction){
+          char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          //dir_update_ptr->pdir1 = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          if (*prediction){
             return btarget;
           }
           else {
             return baddr + sizeof(md_inst_t);
-          } */
+          } 
       }
       else{
         return btarget;
