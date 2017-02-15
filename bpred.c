@@ -664,14 +664,14 @@ bpred_lookup(struct bpred_t *pred,	/* branch predictor instance */
     //TODO: did stuff here this might be wrong, not sure about the if statement
       if ((MD_OP_FLAGS(op) & (F_CTRL|F_UNCOND)) != (F_CTRL|F_UNCOND))
       {
-          char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
-          //dir_update_ptr->pdir1 = bpred_dir_lookup (pred->dirpred.mine, baddr);
-          if (*prediction){
+          //char * prediction = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          dir_update_ptr->pdir1 = bpred_dir_lookup (pred->dirpred.mine, baddr);
+          /*if (*prediction){
             return btarget;
           }
           else {
             return baddr + sizeof(md_inst_t);
-          } 
+          }  */
       }
       else{
         return btarget;
